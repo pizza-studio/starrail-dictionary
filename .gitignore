@@ -15,6 +15,7 @@ dist
 .idea
 
 dictionary_item.sqlite
+dictionary_item.sqlite 2
 
 .DS_Store
 

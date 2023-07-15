@@ -37,9 +37,6 @@ lazy_static! {
 pub async fn update_all_data() -> anyhow::Result<()> {
     let db = Arc::new(establish_connection().await?);
 
-    let data = delete_duplicate_items(&db).await?;
-    info!(?data);
-
     // let mut set: JoinSet<anyhow::Result<()>> = JoinSet::new();
 
     // delete_all_dictionary(&db).await?;
@@ -74,5 +71,8 @@ pub async fn update_all_data() -> anyhow::Result<()> {
     // while let Some(handle) = set.join_next().await {
     //     handle??;
     // }
+
+    delete_duplicate_items(&db).await?;
+
     Ok(())
 }

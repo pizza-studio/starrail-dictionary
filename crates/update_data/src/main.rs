@@ -9,8 +9,6 @@ use tracing_subscriber::{
     filter::EnvFilter, fmt, layer::SubscriberExt, util::SubscriberInitExt, Registry,
 };
 
-use crud::delete_duplicate_items;
-
 #[tokio::main]
 async fn main() {
     init_tracing();

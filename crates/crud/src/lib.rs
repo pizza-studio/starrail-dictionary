@@ -4,11 +4,11 @@ use dotenv::dotenv;
 
 use migration::{DbErr, Migrator};
 use sea_orm::{
-    ActiveModelTrait, ColumnTrait, ConnectionTrait, CursorTrait, Database, EntityTrait,
-    IntoActiveModel, QueryFilter, QueryOrder, QuerySelect, QueryTrait,
+    ActiveModelTrait, ColumnTrait, ConnectionTrait, CursorTrait, Database, DatabaseBackend,
+    EntityTrait, IntoActiveModel, QueryFilter, QueryOrder, QuerySelect, QueryTrait,
 };
 use sea_orm_migration::MigratorTrait;
-use sea_query::{self, Table};
+use sea_query::{self, Query, Table};
 
 use entity::{prelude::*, *};
 
@@ -98,42 +98,65 @@ pub async fn delete_all_dictionary(db: &DbConn) -> Result<(), DbErr> {
     Ok(())
 }
 
-pub async fn delete_duplicate_items(db: &DbConn) -> Result<Vec<dictionary_item::Model>, DbErr> {
+pub async fn delete_duplicate_items(db: &DbConn) -> Result<(), DbErr> {
     info!("Deleting duplicated items");
-    let statement = dictionary_item::Entity::find()
-        .filter(
-            sea_query::Condition::all().add(
-                sea_query::Expr::tuple([
-                    sea_query::Expr::col(dictionary_item::Column::VocabularyTranslation).into(),
-                    sea_query::Expr::col(dictionary_item::Column::Language).into(),
-                ])
-                .in_subquery(
-                    sea_query::Query::select()
-                        .columns([
-                            dictionary_item::Column::VocabularyTranslation,
-                            dictionary_item::Column::Language,
-                        ])
-                        .from(dictionary_item::Entity)
-                        .group_by_columns([
-                            dictionary_item::Column::VocabularyTranslation,
-                            dictionary_item::Column::Language,
-                        ])
-                        .and_having(
-                            sea_query::Expr::expr(
-                                sea_query::Expr::col(
-                                    dictionary_item::Column::VocabularyTranslation,
-                                )
-                                .count(),
-                            )
-                            .gt(1),
+    // dictionary_item::Entity::delete_many().filter(
+    //     dictionary_item::Column::VocabularyId.in_subquery(
+    //         Query::select()
+    //             .column(dictionary_item::Column::VocabularyId.min())
+    //             .from_subquery(
+    //                 (Query::select().columns(cols).from_subquery(
+    //                     (Query::select()
+    //                         .columns([
+    //                             dictionary_item::Column::VocabularyId,
+    //                             dictionary_item::Column::VocabularyTranslation,
+    //                             dictionary_item::Column::Language,
+    //                         ])
+    //                         .from(dictionary_item::Entity)
+    //                         .order_by(dictionary_item::Column::Language, sea_orm::Order::Asc)),
+    //                     Alias::new("subsub"),
+    //                 )),
+    //                 Alias::new("sub"),
+    //             )
+    //             .group_by_col("translations")
+    //             .to_owned(),
+    //     ),
+    // );
+    let exec_res = db
+        .execute(sea_orm::Statement::from_string(
+            DatabaseBackend::Sqlite,
+            "
+            DELETE FROM dictionary_item
+            WHERE
+                vocabulary_id NOT IN (
+                    SELECT MIN(vocabulary_id)
+                    FROM (
+                            SELECT
+                                vocabulary_id,
+                                GROUP_CONCAT(vocabulary_translation, ', ') AS translations
+                            FROM (
+                                    SELECT
+                                        vocabulary_id,
+                                        vocabulary_translation,
+                                        language
+                                    FROM
+                                        dictionary_item
+                                    ORDER BY
+                                        language
+                                ) AS sorted_items
+                            GROUP BY
+                                vocabulary_id
                         )
-                        .to_owned(),
-                ),
-            ),
-        )
-        .build(sea_orm::DatabaseBackend::Sqlite);
-        println!("{}", statement);
-        todo!()
-        // .all(db)
-        // .await
+                    GROUP BY translations
+                )
+            "
+            .to_string(),
+        ))
+        .await?;
+
+    info!(
+        "{} duplicated items was deleted. ",
+        exec_res.rows_affected()
+    );
+    Ok(())
 }
