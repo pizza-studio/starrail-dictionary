@@ -4,5 +4,9 @@ members = [
     "crates/frontend",
     "crates/server",
     "crates/tauri",
-    "crates/types",
+    "crates/model",
+    "crates/crud",
+    "crates/crud/migration",
+    "crates/crud/entity",
+    "crates/update_data",
 ]

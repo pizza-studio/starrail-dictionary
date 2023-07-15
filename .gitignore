@@ -12,3 +12,10 @@ Cargo.lock
 dist
 
 .vscode
+.idea
+
+dictionary_item.sqlite
+
+.DS_Store
+
+logs

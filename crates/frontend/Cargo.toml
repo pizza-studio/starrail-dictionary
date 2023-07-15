@@ -6,17 +6,15 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-log = "0.4"
 serde = "1"
-reqwest = { version = "0.11", features = ["json"] }
-yew = { version = "0.20.0", features = ["csr"] }
-yew-router = "0.17.0"
-yew-hooks = "0.2.0"
-wasm-bindgen = "0.2"
-wasm-bindgen-futures = "0.4"
+model = { path = "../model" }
+web-sys = "0.3.64"
+js-sys = "0.3.64"
 wasm-logger = "0.2.0"
-js-sys = "0.3"
-web-sys = "0.3"
-tauri-sys = { git = "https://github.com/JonasKruckenberg/tauri-sys", features = ["all"] }
-
-types = { path = "../types" }
+wasm-bindgen-futures = "0.4.37"
+wasm-bindgen = "0.2.87"
+yew = { version = "0.20.0", features = ["csr"] }
+reqwest = { version = "0.11.18", features = ["json"] }
+log = "0.4.19"
+yew-hooks = "0.2.0"
+thiserror = "1"

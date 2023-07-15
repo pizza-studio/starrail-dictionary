@@ -1,137 +1,127 @@
-use tauri_sys::tauri::invoke;
+use log::{info, error};
+use model::{NestedDictionaryItem, SearchParams};
+use reqwest;
+use thiserror::Error as ThisError;
+use wasm_bindgen::JsCast;
+use web_sys::{EventTarget, HtmlInputElement};
 use yew::prelude::*;
-use yew_hooks::prelude::*;
+use yew_hooks::use_async;
 
-use types::UserInfo;
+const BASE_URL: &str = "http://localhost:3001";
 
-#[function_component(App)]
-fn app() -> Html {
-    // Get backend port automatically from tauri command.
-    let port = use_async_with_options(
-        async move {
-            match invoke::<_, String>("get_port", &()).await {
-                Ok(p) => Ok(p),
-                Err(e) => Err(format!("Error: {:?}", e)),
-            }
-        },
-        UseAsyncOptions::enable_auto(),
-    );
+#[function_component]
+fn App() -> Html {
+    let client = use_state(|| reqwest::Client::new());
 
-    // Fetch data from backend.
-    let state = {
-        let port = port.clone();
-        use_async(async move {
-            match &port.data {
-                Some(port) => {
-                    let response = reqwest::get(format!("http://localhost:{}/user", port)).await;
-                    match response {
-                        Ok(data) => match data.json::<UserInfo>().await {
-                            Ok(user) => Ok(user),
-                            Err(_) => Err("Backend body Error".to_owned()),
-                        },
-                        Err(_) => Err("Backend request Error".to_owned()),
-                    }
-                }
-                _ => Err("Backend is unavailable".to_owned()),
-            }
-        })
-    };
-
-    let onclick = {
-        let state = state.clone();
-        Callback::from(move |_| {
-            state.run();
-        })
-    };
-
-    // Fetch data from server.
-    let state_server = use_async(async move {
-        let response = reqwest::get("http://localhost:3001/user").await;
-        match response {
-            Ok(data) => match data.json::<UserInfo>().await {
-                Ok(user) => Ok(user),
-                Err(_) => Err("Body Error".to_string()),
-            },
-            Err(_) => Err("Request Error".to_string()),
-        }
+    let search_param = use_state(|| SearchParams {
+        search_word: "".to_string(),
+        batch_size: 10,
+        page: Some(0),
     });
 
-    let onclickserver = {
-        let state_server = state_server.clone();
-        Callback::from(move |_| {
-            state_server.run();
+
+    let on_input = {
+        let search_param = search_param.clone();
+        Callback::from(move |e: Event| {
+            let target: Option<EventTarget> = e.target();
+            let input = target.and_then(|t| t.dyn_into::<HtmlInputElement>().ok());
+
+            if let Some(input) = input {
+                println!("{}", input.value());
+                search_param.set(SearchParams {
+                    search_word: input.value(),
+                    page: search_param.page,
+                    batch_size: search_param.batch_size,
+                });
+            }
         })
     };
 
-    let history = use_list(vec![]);
-
-    // Manually connect to websocket with custom options.
-    let ws = {
-        let history = history.clone();
-        let port = port.data.clone().unwrap_or_default();
-        use_websocket_with_options(
-            format!("ws://localhost:{}/ws", port),
-            UseWebSocketOptions {
-                // Receive message by callback `onmessage`.
-                onmessage: Some(Box::new(move |message| {
-                    history.push(format!("ws [recv]: {}", message));
-                })),
-                manual: Some(true),
-                ..Default::default()
-            },
-        )
-    };
-    let onclick2 = {
-        let ws = ws.clone();
-        let history = history.clone();
-        Callback::from(move |_| {
-            let message = "Hello, backend!".to_string();
-            ws.send(message.clone());
-            history.push(format!("ws [send]: {}", message));
+    let state = {
+        let search_param = search_param.clone();
+        use_async(async move {
+            let client = client.clone();
+            let response = client
+                .get(format!("{}/{}", BASE_URL, "search"))
+                .fetch_mode_no_cors()
+                .query(&*search_param)
+                .header(reqwest::header::ACCESS_CONTROL_ALLOW_ORIGIN, "true")
+                .send()
+                .await
+                .map_err(|err| {
+                    error!("{}", err);
+                    Error::RequestError
+                });
+            if let Ok(data) = response {
+                if data.status().is_success() {
+                    data.json::<Vec<NestedDictionaryItem>>()
+                        .await
+                        .map_err(|_| Error::DeserializeError)
+                } else {
+                    match data.status().as_u16() {
+                        401 => Err(Error::Unauthorized),
+                        403 => Err(Error::Forbidden),
+                        404 => Err(Error::NotFound),
+                        500 => Err(Error::InternalServerError),
+                        _ => Err(Error::RequestError),
+                    }
+                }
+            } else {
+                Err(Error::RequestError)
+            }
         })
     };
-    let onopen = {
-        let ws = ws.clone();
-        Callback::from(move |_| {
-            ws.open();
+
+    let on_click = {
+        let search_param_clone = search_param.clone();
+        let search_param_clone2 = search_param.clone();
+        let state = state.clone();
+        Callback::from(move |ev: MouseEvent| {
+            info!("Querying dictionary with param :{:?}", *search_param_clone);
+            state.run();
         })
     };
 
     html! {
         <>
-            <p>
-                <button {onclick}>{ "Load backend api" }</button>
-                <button onclick={onclickserver}>{ "Load server api" }</button>
-            </p>
-            {
-                if let Some(response) = &state.data {
-                    html! {
-                        <p>{ "From backend: " }<b>{ &response.name }</b></p>
+            <HeaderBar />
+            <div>
+                <input
+                    onchange={on_input}
+                    id="search_input"
+                    type="text"
+                    value={search_param.search_word.clone()}
+                />
+                <button onclick={on_click}>{"Search"}</button>
+            </div>
+            <div>
+                {
+                    if state.loading {
+                        html!{ "loading" }
+                    } else {
+                        html!{}
                     }
-                } else {
-                    html! {}
                 }
-            }
-            {
-                if let Some(response) = &state_server.data {
-                    html! {
-                        <p>{ "From server: " }<b>{ &response.name }</b></p>
+                {
+                    if let Some(data) = &state.data {
+                        html!{
+                            <>
+                                <p>{format!("Count: {}", data.len())}</p>
+                                <DictionaryItemList items={data.clone()} />
+                            </>
+                        }
+                    } else {
+                        html!{}
                     }
-                } else {
-                    html! {}
                 }
-            }
-            <p>
-                <button onclick={onopen} disabled={*ws.ready_state != UseWebSocketReadyState::Closed}>{ "Connect to backend websocket" }</button>
-                <button onclick={onclick2} disabled={*ws.ready_state != UseWebSocketReadyState::Open}>{ "Send to backend websocket" }</button>
-            </p>
-            {
-                for history.current().iter().map(|message| {
-                    html! {
-                        <p>{ message }</p>
+                {
+                    if let Some(error) = &state.error {
+                        html! { error }
+                    } else {
+                        html! {}
                     }
-                })
-            }
+                }
+            </div>
         </>
     }
 }
@@ -139,4 +129,89 @@ fn app() -> Html {
 fn main() {
     wasm_logger::init(wasm_logger::Config::default());
     yew::Renderer::<App>::new().render();
+}
+
+#[function_component(HeaderBar)]
+fn header_bar() -> Html {
+    html! {
+        <nav class="navbar">
+            <div class="container">
+                <div id="navMenu" class="navbar-menu">
+                    <div class="navbar-start">
+                        <a class="navbar-item">
+                        {"Home"}
+                        </a>
+                    </div>
+
+                    <div class="navbar-end">
+                        <div class="navbar-item">
+                        <div class="buttons">
+                            <a class="button is-dark">{"Github"}</a>
+                            <a class="button is-link">{"Download"}</a>
+                        </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </nav>
+    }
+}
+
+#[derive(Properties, PartialEq)]
+struct DictionaryItemListProps {
+    items: Vec<NestedDictionaryItem>,
+}
+
+#[function_component(DictionaryItemList)]
+fn dictionary_item_list(DictionaryItemListProps { items }: &DictionaryItemListProps) -> Html {
+    html! {
+        <>
+            {
+                items.into_iter().map(|item| {
+                    html!{
+                        <>
+                            <p>
+                                { format!("{}, {}", item.target, item.target_lang) }
+                            </p>
+                            <p>
+                                {
+                                    item.clone().lan_dict.into_iter().map(|(lang, translation)| {
+                                        html!{ format!{"{}: {}", lang, translation} }
+                                    }).collect::<Html>()
+                                }
+                            </p>
+                        </>
+                    }
+                }).collect::<Html>()
+            }
+        </>
+    }
+}
+
+/// Define all possible errors
+#[derive(ThisError, Clone, Debug, PartialEq, Eq)]
+pub enum Error {
+    /// 401
+    #[error("Unauthorized")]
+    Unauthorized,
+
+    /// 403
+    #[error("Forbidden")]
+    Forbidden,
+
+    /// 404
+    #[error("Not Found")]
+    NotFound,
+
+    /// 500
+    #[error("Internal Server Error")]
+    InternalServerError,
+
+    /// serde deserialize error
+    #[error("Deserialize Error")]
+    DeserializeError,
+
+    /// request error
+    #[error("Http Request Error")]
+    RequestError,
 }
