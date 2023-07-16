@@ -5,8 +5,9 @@ use axum::{
     http::{Method, StatusCode},
     response::IntoResponse,
     routing::get,
-    Json, Router,
+    Json, Router
 };
+use tower_http::cors::CorsLayer;
 
 use model::{NestedDictionaryItem, SearchParams};
 
@@ -40,7 +41,8 @@ async fn main() {
 
     let app = Router::new()
         .route("/search", get(search_dictionary))
-        .with_state(shared_state);
+        .with_state(shared_state)
+        .layer(CorsLayer::permissive());
 
     let addr = SocketAddr::from(([127, 0, 0, 1], 3001));
     info!("Listening on {}", addr);
