@@ -26,3 +26,4 @@ axum = "0.6.18"
 serde_json = "1.0.102"
 axum-macros = "0.3.7"
 tower-http = { version = "0.4.1", features = ["cors"] }
+clap = { version = "4.3.12", features = ["derive"] }
