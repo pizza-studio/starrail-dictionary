@@ -15,7 +15,7 @@ use model::{SearchApiResult, SearchParams};
 
 use crud::{establish_connection, search_dictionary_items, DbConn};
 
-use tracing::{error, info, warn, Level};
+use tracing::{error, info, Level};
 use tracing_appender::{non_blocking, rolling};
 use tracing_subscriber::{
     filter::EnvFilter, fmt, layer::SubscriberExt, util::SubscriberInitExt, Layer, Registry,
@@ -36,10 +36,6 @@ async fn main() {
     info!("Args: {args:?}");
 
     info!("Establishing database connection");
-
-    warn!("test warning");
-    error!("test error");
-
 
     let db = establish_connection().await.unwrap_or_log();
     let shared_state = Arc::new(db);

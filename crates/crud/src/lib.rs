@@ -1,7 +1,7 @@
 use migration::{DbErr, Migrator};
 use sea_orm::{
     ColumnTrait, ConnectionTrait, Database, EntityTrait, PaginatorTrait, QueryFilter, QueryOrder,
-    QuerySelect,
+    QuerySelect, Statement,
 };
 use sea_orm_migration::MigratorTrait;
 use sea_query::{self, Query};
@@ -10,7 +10,7 @@ use tracing_unwrap::{self, ResultExt};
 
 use std::sync::Arc;
 
-use tracing::info;
+use tracing::{info, warn};
 
 use model::NestedDictionaryItem;
 
@@ -121,13 +121,29 @@ pub async fn establish_connection() -> Result<DbConn, DbErr> {
         Connecting to database.
         DB_USER: {db_user}
         DB_NAME: {DB_NAME}
-        host: localhost:5432
+        host: db:5432
     "
     );
 
-    let database_url = format!("postgresql://{db_user}:{db_password}@localhost:5432/{DB_NAME}");
+    let database_url = format!("postgresql://{db_user}:{db_password}@db:5432/{DB_NAME}");
 
-    let db = Database::connect(&database_url).await.unwrap_or_log();
+    let conn_result = Database::connect(&database_url).await;
+
+    let db = match conn_result {
+        Ok(db) => db,
+        Err(err) => {
+            warn!(?err);
+            let init_db_url = format!("postgresql://{db_user}:{db_password}@db:5432/postgres");
+            let db = Database::connect(&init_db_url).await.unwrap_or_log();
+            db.execute(Statement::from_string(
+                db.get_database_backend(),
+                format!("CREATE DATABASE {DB_NAME}"),
+            ))
+            .await
+            .unwrap_or_log();
+            Database::connect(&database_url).await.unwrap_or_log()
+        }
+    };
 
     info!("Database connection init succeeded. ");
 

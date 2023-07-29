@@ -1,12 +1,36 @@
-name: starrail-dictionary-server
+version: '3.8'
+name: starrail-dictionary
 services:
-  server:
+  backend:
     build: .
     environment:
-      - RUST_LOG=debug
+      RUST_LOG: DEBUG
+      DATABASE_USER: postgres
+      DATABASE_PASSWORD: YOURPASSWORD
     ports:
       - 3001:3001
     volumes:
-      - logs:/app/logs/starrail-dictionary
+      - starrail-dict-logs:/app/logs/
+    depends_on:
+      - db
+    networks:
+      - db
+    command: ["./server", "--update"]
+  db:
+    image: postgres:latest
+    restart: always
+    ports:
+     - 5432:5432
+    environment:
+      POSTGRES_PASSWORD: YOURPASSWORD
+    networks:
+      - db
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
 volumes:
   starrail-dict-logs: {}
+  pgdata: {}
+
+networks:
+  db: {}
