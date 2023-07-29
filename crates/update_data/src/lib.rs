@@ -1,19 +1,21 @@
-use std::{collections::HashMap, rc::Rc, sync::Arc};
+use std::{collections::HashMap, sync::Arc};
 
 use lazy_static::lazy_static;
-use serde::{Deserialize, Serialize};
+
 use tokio::{self, task::JoinSet};
 
 use model::Language;
 
-use crud::{dictionary_item, establish_connection, insert_item, NotSet, Set, Unchanged, delete_all_dictionary, delete_duplicate_items};
+use crud::{
+    delete_all_dictionary, delete_duplicate_items, dictionary_item,
+    insert_item, Set,
+};
 
 use anyhow::{self, Ok};
 
-use sea_orm::Iterable;
-use strum::IntoEnumIterator;
+use sea_orm::{Iterable, DbConn};
 
-use tracing::{debug, error, info};
+use tracing::info;
 
 lazy_static! {
     static ref LANGUAGE_URL_MAPPING: HashMap<Language, String> = {
@@ -34,43 +36,41 @@ lazy_static! {
     };
 }
 
-pub async fn update_all_data() -> anyhow::Result<()> {
-    let db = Arc::new(establish_connection().await?);
+pub async fn update_all_data(db: Arc<DbConn>) -> anyhow::Result<()> {
+    let mut set: JoinSet<anyhow::Result<usize>> = JoinSet::new();
 
-    // let mut set: JoinSet<anyhow::Result<()>> = JoinSet::new();
+    delete_all_dictionary(&db).await?;
 
-    // delete_all_dictionary(&db).await?;
+    LANGUAGE_URL_MAPPING.iter().for_each(|(lang, url)| {
+        let db = db.clone();
+        set.spawn(async move {
+            info!("Getting data for {}", lang);
+            let dictionary_map = reqwest::get(url)
+                .await?
+                .json::<HashMap<i32, String>>()
+                .await?;
+            info!("Updating data for {}", lang);
+            let item_inserted_count = insert_item(
+                dictionary_map
+                    .into_iter()
+                    .map(|(word_id, word_translation)| dictionary_item::ActiveModel {
+                        vocabulary_id: Set(word_id),
+                        language: Set(lang.clone()),
+                        vocabulary_translation: Set(word_translation),
+                        ..Default::default()
+                    })
+                    .collect(),
+                &db,
+            )
+            .await?;
+            info!("Data for {} updated", lang);
+            Ok(item_inserted_count)
+        });
+    });
 
-    // LANGUAGE_URL_MAPPING.iter().for_each(|(lang, url)| {
-    //     let db = db.clone();
-    //     set.spawn(async move {
-    //         info!("Getting data for {}", lang);
-    //         let dictionary_map = reqwest::get(url)
-    //             .await?
-    //             .json::<HashMap<i32, String>>()
-    //             .await?;
-    //         info!("Updating data for {}", lang);
-    //         insert_item(
-    //             dictionary_map
-    //                 .into_iter()
-    //                 .map(|(word_id, word_translation)| dictionary_item::ActiveModel {
-    //                     vocabulary_id: Set(word_id),
-    //                     language: Set(lang.clone()),
-    //                     vocabulary_translation: Set(word_translation),
-    //                     ..Default::default()
-    //                 })
-    //                 .collect(),
-    //             &db,
-    //         )
-    //         .await?;
-    //         info!("Data for {} updated", lang);
-    //         Ok(())
-    //     });
-    // });
-
-    // while let Some(handle) = set.join_next().await {
-    //     handle??;
-    // }
+    while let Some(handle) = set.join_next().await {
+        handle??;
+    }
 
     delete_duplicate_items(&db).await?;
 

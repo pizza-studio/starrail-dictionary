@@ -1,16 +1,23 @@
-use std::{collections::HashMap, fmt::Display};
+use std::collections::HashMap;
+use validator::Validate;
 
 use serde::{Deserialize, Serialize};
 
 #[cfg(not(target_family = "wasm"))]
 use sea_orm::{self, DeriveActiveEnum};
 
-use strum;
-
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct UserInfo {
     pub id: i32,
     pub name: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct SearchApiResult {
+    pub total: u64,
+    pub page: u64,
+    pub page_size: u64,
+    pub translations: Vec<NestedDictionaryItem>
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -31,8 +38,8 @@ pub struct NestedDictionaryItem {
 pub enum Language {
     #[cfg_attr(not(target_family = "wasm"), sea_orm(string_value = "cht"))]
     Cht,
-    #[cfg_attr(not(target_family = "wasm"), sea_orm(string_value = "cn"))]
-    Cn,
+    #[cfg_attr(not(target_family = "wasm"), sea_orm(string_value = "chs"))]
+    Chs,
     #[cfg_attr(not(target_family = "wasm"), sea_orm(string_value = "de"))]
     De,
     #[cfg_attr(not(target_family = "wasm"), sea_orm(string_value = "en"))]
@@ -62,7 +69,7 @@ impl Language {
         use Language::*;
         match self {
             Cht => "cht",
-            Cn => "cn",
+            Chs => "chs",
             De => "de",
             En => "en",
             Es => "es",
@@ -85,9 +92,10 @@ impl Display for Language {
     }
 }
 
-#[derive(Deserialize, Serialize, Debug, Clone, PartialEq)]
+#[derive(Deserialize, Serialize, Debug, Clone, PartialEq, Validate)]
 pub struct SearchParams {
-    pub search_word: String,
-    pub batch_size: u64,
+    #[validate(range(min=1))]
     pub page: Option<u64>,
+    #[validate(range(min=1))]
+    pub page_size: u64,
 }

@@ -1,0 +1,12 @@
+name: starrail-dictionary-server
+services:
+  server:
+    build: .
+    environment:
+      - RUST_LOG=debug
+    ports:
+      - 3001:3001
+    volumes:
+      - logs:/app/logs/starrail-dictionary
+volumes:
+  starrail-dict-logs: {}

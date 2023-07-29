@@ -2,8 +2,6 @@ pub use sea_orm_migration::prelude::*;
 
 mod m20230713_234200_create_dictionary_item_table;
 
-pub use m20230713_234200_create_dictionary_item_table::DictionaryItem;
-
 pub struct Migrator;
 
 #[async_trait::async_trait]

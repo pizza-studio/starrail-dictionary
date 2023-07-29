@@ -8,6 +8,7 @@ edition = "2021"
 [dependencies]
 serde = "1"
 strum = { version = "0.25.0", features = ["derive"] }
+validator = { version = "0.16.1", features = ["derive"] }
 
 [target.'cfg(not(target_family="wasm"))'.dependencies]
-sea-orm = { version = "0.12.0-rc.4", features = ["sqlx-sqlite", "runtime-tokio-rustls", "macros"] }
+sea-orm = { version = "0.12.0-rc.4", features = ["sqlx-postgres", "runtime-tokio-rustls", "macros"] }

@@ -42,16 +42,6 @@ impl MigrationTrait for Migration {
                     .to_owned(),
             )
             .await?;
-        manager
-            .create_index(
-                Index::create()
-                    .if_not_exists()
-                    .name("idx-vocabulary_translation")
-                    .table(DictionaryItem::Table)
-                    .col(DictionaryItem::VocabularyTranslation)
-                    .to_owned(),
-            )
-            .await?;
         Ok(())
     }
 

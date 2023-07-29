@@ -1,9 +1,11 @@
-use crud::delete_all_dictionary;
+use std::sync::Arc;
+
+use crud::establish_connection;
 use tokio;
 use tracing_unwrap::ResultExt;
 use update_data::update_all_data;
 
-use tracing::{debug, error, info};
+use tracing::info;
 use tracing_appender::{non_blocking, rolling};
 use tracing_subscriber::{
     filter::EnvFilter, fmt, layer::SubscriberExt, util::SubscriberInitExt, Registry,
@@ -14,7 +16,11 @@ async fn main() {
     init_tracing();
 
     info!("Start updating...");
-    update_all_data().await.unwrap_or_log()
+
+    let db = Arc::new(establish_connection().await.unwrap_or_log());
+    update_all_data(db)
+        .await
+        .unwrap_or_log()
 }
 
 fn init_tracing() {
