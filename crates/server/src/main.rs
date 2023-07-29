@@ -15,7 +15,7 @@ use model::{SearchApiResult, SearchParams};
 
 use crud::{establish_connection, search_dictionary_items, DbConn};
 
-use tracing::{error, info, warn, log::LevelFilter, Level};
+use tracing::{error, info, warn, Level};
 use tracing_appender::{non_blocking, rolling};
 use tracing_subscriber::{
     filter::EnvFilter, fmt, layer::SubscriberExt, util::SubscriberInitExt, Layer, Registry,
