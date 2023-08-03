@@ -14,3 +14,5 @@ dist
 
 logs
 data
+
+docker-compose.yml
