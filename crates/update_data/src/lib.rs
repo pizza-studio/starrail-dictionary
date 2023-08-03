@@ -44,12 +44,12 @@ pub async fn update_all_data(db: Arc<DbConn>) -> anyhow::Result<()> {
     LANGUAGE_URL_MAPPING.iter().for_each(|(lang, url)| {
         let db = db.clone();
         set.spawn(async move {
-            info!("Getting data for {}", lang);
+            info!("Getting data for {}", lang.str_id());
             let dictionary_map = reqwest::get(url)
                 .await?
                 .json::<HashMap<i32, String>>()
                 .await?;
-            info!("Updating data for {}", lang);
+            info!("Updating data for {}", lang.str_id());
             let item_inserted_count = insert_item(
                 dictionary_map
                     .into_iter()
@@ -63,7 +63,7 @@ pub async fn update_all_data(db: Arc<DbConn>) -> anyhow::Result<()> {
                 &db,
             )
             .await?;
-            info!("Data for {} updated", lang);
+            info!("Data for {} updated", lang.str_id());
             Ok(item_inserted_count)
         });
     });

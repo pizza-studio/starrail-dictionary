@@ -12,9 +12,9 @@ model = { path = "../model" }
 
 tokio = { version = "^1.29", features = ["full"] }
 
-sea-orm = { version = "0.12.0-rc.4", features = ["sqlx-postgres", "runtime-tokio-rustls", "macros"] }
-sea-query = "0.29"
-sea-orm-migration = { version = "0.12.0-rc.4", features = ["sqlx-postgres", "runtime-tokio-rustls"] }
+sea-orm = { version = "0.12.1", features = ["sqlx-postgres", "runtime-tokio-rustls", "macros"] }
+sea-query = "0.30.0"
+sea-orm-migration = { version = "0.12.1", features = ["sqlx-postgres", "runtime-tokio-rustls"] }
 
 serde = { version = "1", features = ["derive", "serde_derive" ] }
 dotenv = "0.15.0"
