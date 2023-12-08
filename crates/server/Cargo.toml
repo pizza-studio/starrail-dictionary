@@ -31,3 +31,4 @@ tower-http = { version = "0.4.1", features = ["cors"] }
 clap = { version = "4.3.12", features = ["derive"] }
 anyhow = "1.0.72"
 axum-valid = "0.3.0"
+openssl = { version = "0.10.61", features = ["vendored"] }
