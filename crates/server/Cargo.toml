@@ -8,9 +8,9 @@ edition = "2021"
 [dependencies]
 
 
-tokio = { version = "1.0", features = ["full"] }
+tokio = { version = "1.36", features = ["full"] }
 
-serde = "1"
+serde = "1.0"
 
 tracing = "0.1"
 tracing-subscriber = "0.3"
@@ -22,13 +22,12 @@ model = { path = "../model" }
 crud = { path = "../crud" }
 update_data = { path = "../update_data" }
 
-hyper = { version = "1.1.0", features = ["full"] }
-tower = "0.4.13"
-axum = "0.7.4"
-serde_json = "1.0.102"
-axum-macros = "0.4.1"
-tower-http = { version = "0.5.1", features = ["cors"] }
-clap = { version = "4.3.12", features = ["derive"] }
-anyhow = "1.0.72"
-axum-valid = "0.15.0"
-openssl = { version = "0.10.61", features = ["vendored"] }
+hyper = { version = "1.1", features = ["full"] }
+tower = "0.4"
+axum = "0.7"
+serde_json = "1.0"
+axum-macros = "0.4"
+tower-http = { version = "0.5", features = ["cors"] }
+clap = { version = "4.3", features = ["derive"] }
+anyhow = "1.0"
+axum-valid = "0.15"

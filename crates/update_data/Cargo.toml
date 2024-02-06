@@ -6,16 +6,16 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-reqwest = { version = "0.11.18", features = ["json", "serde_json"] }
-serde = { version = "1", features = ["derive", "serde_derive" ] }
-tokio = { version = "^1.29", features = ["full"] }
+reqwest = { version = "0.11", features = ["json", "serde_json"] }
+serde = { version = "1.0", features = ["derive", "serde_derive" ] }
+tokio = { version = "1.36", features = ["full"] }
 crud = { path = "../crud" }
-serde_json = "1.0.102"
-lazy_static = "1.4.0"
-anyhow = "1.0.71"
+serde_json = "1.0"
+lazy_static = "1.4"
+anyhow = "1.0"
 model = { path = "../model" }
-strum = { version = "0.25.0", features = ["derive"] }
-sea-orm = { version = "0.12.1", features = ["sqlx-postgres", "runtime-tokio-rustls", "macros"] }
+strum = { version = "0.26", features = ["derive"] }
+sea-orm = { version = "0.12", features = ["sqlx-postgres", "runtime-tokio-rustls", "macros"] }
 
 tracing = "0.1"
 tracing-subscriber = "0.3"
