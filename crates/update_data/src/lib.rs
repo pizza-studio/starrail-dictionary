@@ -31,7 +31,6 @@ lazy_static! {
                 url,
             )
         })
-        .into_iter()
         .collect()
     };
 }

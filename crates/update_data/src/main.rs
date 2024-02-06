@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use crud::establish_connection;
-use tokio;
+
 use tracing_unwrap::ResultExt;
 use update_data::update_all_data;
 

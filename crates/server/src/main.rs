@@ -1,4 +1,4 @@
-use std::{net::SocketAddr, sync::Arc, vec};
+use std::{sync::Arc, vec};
 
 use axum::{
     extract::{Path, Query, State},
@@ -7,6 +7,7 @@ use axum::{
     Json, Router,
 };
 use clap::Parser;
+use tokio::net::TcpListener;
 use tower_http::cors::CorsLayer;
 
 use axum_valid::Valid;
@@ -54,10 +55,11 @@ async fn main() {
         .with_state(shared_state)
         .layer(CorsLayer::permissive());
 
-    let addr = SocketAddr::from(([0, 0, 0, 0], 3001));
+    let addr = "0.0.0.0:3001";
+    let listener = TcpListener::bind(addr).await.unwrap();
     info!("Listening on {}", addr);
-    axum::Server::bind(&addr)
-        .serve(app.into_make_service())
+
+    axum::serve(listener, app)
         .await
         .unwrap_or_log();
 }
@@ -72,9 +74,7 @@ async fn search_dictionary(
 
     match &*version {
         "v1" => {
-            let (total_page, translations) = (!query.is_empty())
-                .then_some(search_dictionary_items(&query, page_size, page, db).await)
-                .unwrap_or(Ok((0, vec![])))
+            let (total_page, translations) = if !query.is_empty() { search_dictionary_items(&query, page_size, page, db).await } else { Ok((0, vec![])) }
                 .map_err(|err| {
                     error!("{:?}", err);
                     (StatusCode::INTERNAL_SERVER_ERROR, "Internal server error. ")
@@ -83,7 +83,7 @@ async fn search_dictionary(
             Ok(Json(SearchApiResult {
                 total: total_page,
                 page: page.unwrap_or(0),
-                page_size: page_size,
+                page_size,
                 translations: translations.into_iter().collect(),
             }))
         }
@@ -111,7 +111,9 @@ fn init_tracing() -> (non_blocking::WorkerGuard, non_blocking::WorkerGuard) {
     let error_file_layer = fmt::layer()
         .with_ansi(false)
         .with_writer(error_non_blocking_appender)
-        .with_filter(tracing_subscriber::filter::LevelFilter::from_level(Level::WARN));
+        .with_filter(tracing_subscriber::filter::LevelFilter::from_level(
+            Level::WARN,
+        ));
 
     Registry::default()
         .with(env_filter)

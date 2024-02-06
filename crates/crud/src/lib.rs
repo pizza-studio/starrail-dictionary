@@ -26,7 +26,7 @@ pub async fn insert_item(
 ) -> Result<usize> {
     let count = new_items.len();
 
-    for items in new_items.chunks(800).into_iter() {
+    for items in new_items.chunks(800) {
         dictionary_item::Entity::insert_many(items.to_vec())
             .exec(db)
             .await?;
