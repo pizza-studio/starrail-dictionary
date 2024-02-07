@@ -9,6 +9,7 @@ use sea_query::{self, Query};
 use tracing_unwrap::{self, ResultExt};
 
 use std::sync::Arc;
+use std::time::Duration;
 
 use tracing::{info, warn};
 
@@ -30,6 +31,7 @@ pub async fn insert_item(
         dictionary_item::Entity::insert_many(items.to_vec())
             .exec(db)
             .await?;
+        tokio::time::sleep(Duration::from_secs_f32(0.1)).await;
     }
 
     info!("{} new dictionary items inserted", count);

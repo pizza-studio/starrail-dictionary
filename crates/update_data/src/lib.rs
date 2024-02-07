@@ -2,7 +2,7 @@ use std::{collections::HashMap, sync::Arc};
 
 use lazy_static::lazy_static;
 
-use tokio::{self, task::JoinSet};
+
 
 use model::Language;
 
@@ -36,39 +36,29 @@ lazy_static! {
 }
 
 pub async fn update_all_data(db: Arc<DbConn>) -> anyhow::Result<()> {
-    let mut set: JoinSet<anyhow::Result<usize>> = JoinSet::new();
-
     delete_all_dictionary(&db).await?;
 
-    LANGUAGE_URL_MAPPING.iter().for_each(|(lang, url)| {
-        let db = db.clone();
-        set.spawn(async move {
-            info!("Getting data for {}", lang.str_id());
-            let dictionary_map = reqwest::get(url)
-                .await?
-                .json::<HashMap<i32, String>>()
-                .await?;
-            info!("Updating data for {}", lang.str_id());
-            let item_inserted_count = insert_item(
-                dictionary_map
-                    .into_iter()
-                    .map(|(word_id, word_translation)| dictionary_item::ActiveModel {
-                        vocabulary_id: Set(word_id),
-                        language: Set(lang.clone()),
-                        vocabulary_translation: Set(word_translation),
-                        ..Default::default()
-                    })
-                    .collect(),
-                &db,
-            )
+    for (lang, url) in LANGUAGE_URL_MAPPING.iter() {
+        info!("Getting data for {}", lang.str_id());
+        let dictionary_map = reqwest::get(url)
+            .await?
+            .json::<HashMap<i32, String>>()
             .await?;
-            info!("Data for {} updated", lang.str_id());
-            Ok(item_inserted_count)
-        });
-    });
-
-    while let Some(handle) = set.join_next().await {
-        handle??;
+        info!("Updating data for {}", lang.str_id());
+        let item_inserted_count = insert_item(
+            dictionary_map
+                .into_iter()
+                .map(|(word_id, word_translation)| dictionary_item::ActiveModel {
+                    vocabulary_id: Set(word_id),
+                    language: Set(lang.clone()),
+                    vocabulary_translation: Set(word_translation),
+                    ..Default::default()
+                })
+                .collect(),
+            &db,
+        )
+        .await?;
+        info!("Data for {} updated ({})", lang.str_id(), item_inserted_count);
     }
 
     delete_duplicate_items(&db).await?;
