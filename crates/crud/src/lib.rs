@@ -179,7 +179,7 @@ pub async fn delete_duplicate_items(db: &DbConn) -> Result<(), DbErr> {
                         FROM (
                             SELECT
                                 vocabulary_id,
-                                STRING_AGG(vocabulary_translation, ', ') AS translations
+                                STRING_AGG(vocabulary_translation, ', ' ORDER BY language) AS translations
                             FROM (
                                 SELECT
                                     vocabulary_id,
